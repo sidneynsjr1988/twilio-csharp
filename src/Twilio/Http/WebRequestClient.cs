@@ -27,14 +27,14 @@ namespace Twilio.Http
             var httpRequest = BuildHttpRequest(request);
             if (!Equals(request.Method, HttpMethod.Get))
             {
-                var stream = GetStream(httpRequest);
+                var stream = httpRequest.GetRequestStream();
                 stream.Write(request.EncodePostParams(), 0, request.EncodePostParams().Length);
                 stream.Close();
             }
 
             try
             {
-                var response = GetResponse(httpRequest);
+                var response = (HttpWebResponse) httpRequest.GetResponse();
                 var reader = new StreamReader(response.GetResponseStream());
                 return new Response(response.StatusCode, reader.ReadToEnd());
             }
@@ -75,16 +75,6 @@ namespace Twilio.Http
                 const string libraryVersion = "twilio-csharp/" + AssemblyInfomation.AssemblyInformationalVersion + PlatVersion;
                 request.UserAgent = libraryVersion;
             }
-        }
-
-        private static Stream GetStream(WebRequest request)
-        {
-            return request.GetRequestStream();
-        }
-
-        private static HttpWebResponse GetResponse(WebRequest request)
-        {
-            return (HttpWebResponse) request.GetResponse();
         }
 
         private HttpWebRequest BuildHttpRequest(Request request)
