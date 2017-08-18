@@ -24,6 +24,7 @@ namespace Twilio.Http
         /// <returns>Twilio response</returns>
         public override Response MakeRequest(Request request)
         {
+
             var httpRequest = BuildHttpRequest(request);
             if (!Equals(request.Method, HttpMethod.Get))
             {
@@ -32,39 +33,32 @@ namespace Twilio.Http
                 stream.Close();
             }
 
+            this.LastRequest = request;
+            this.LastResponse = null;
             try
             {
                 var response = (HttpWebResponse) httpRequest.GetResponse();
-                var reader = new StreamReader(response.GetResponseStream());
-                return new Response(response.StatusCode, reader.ReadToEnd());
+                var content = GetResponseContent(response);
+                this.LastResponse = new Response(response.StatusCode, content);
             }
             catch (WebException e)
             {
-                throw HandleErrorResponse((HttpWebResponse) e.Response);
+                if (e.Response == null)
+                {
+                    // Network or connection error
+                    throw;
+                }
+                // Non 2XX status code
+                var errorResponse = (HttpWebResponse) e.Response;
+                this.LastResponse = new Response(errorResponse.StatusCode, GetResponseContent(errorResponse));
             }
+            return this.LastResponse;
         }
 
-        private static Exception HandleErrorResponse(HttpWebResponse errorResponse)
+        private string GetResponseContent(HttpWebResponse response)
         {
-            if (errorResponse.StatusCode >= HttpStatusCode.InternalServerError &&
-                errorResponse.StatusCode < HttpStatusCode.HttpVersionNotSupported)
-            {
-                return new TwilioException("Internal Server error: " + errorResponse.StatusDescription);
-            }
-
-            var responseStream = errorResponse.GetResponseStream();
-            var errorReader = new StreamReader(responseStream);
-            var errorContent = errorReader.ReadToEnd();
-
-            try
-            {
-                var restEx = RestException.FromJson(errorContent);
-                return restEx ?? new TwilioException("Error: " + errorResponse.StatusDescription + " - " + errorContent);
-            }
-            catch (JsonReaderException)
-            {
-                return new TwilioException("Error: " + errorResponse.StatusDescription + " - " + errorContent);
-            }
+            var reader = new StreamReader(response.GetResponseStream());
+            return reader.ReadToEnd();
         }
 
         private static void SetUserAgent(HttpWebRequest request)
