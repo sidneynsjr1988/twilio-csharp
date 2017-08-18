@@ -1,11 +1,6 @@
 ﻿#if NET35
-using System;
 using System.IO;
 using System.Net;
-using System.Reflection;
-using System.Diagnostics;
-using Twilio.Exceptions;
-using Newtonsoft.Json;
 
 namespace Twilio.Http
 {
